@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cce21days-app3-huaweicloud
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cce21days-app3-huaweicloud
+  template:
+    metadata:
+      labels:
+        app: cce21days-app3-huaweicloud
+    spec:
+      containers:
+      - image: redis:latest
+        name: container-0
+      imagePullSecrets:
+      - name: default-secret
+      # 此处亲和性设置是为了将pod调度到有EIP的节点，便于下载外网镜像
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values:
+                - 192.168.0.107

@@ -1,0 +1,16 @@
+#kubectl expose pod cce21days-app5-pod-ming19871211 --type=NodePort --port=80 --target-port=80 --name=cce21days-app5-svc-ming19871211
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: cce21days-app5-svc-ming19871211
+  name: cce21days-app5-svc-ming19871211
+spec:
+  ports:
+  - name: service0
+    port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: cce21days-app5-pod-ming19871211
+  type: NodePort

@@ -1,0 +1,85 @@
+# 访问的来源pod1
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: network-pod01
+  name: network-pod01
+spec:
+  containers:
+  - image: tomcat
+    imagePullPolicy: IfNotPresent
+    name: container-01
+    resources:
+      limits:
+        cpu: 250m
+        memory: 521Mi
+      requests:
+        cpu: 250m
+        memory: 521Mi
+---
+# 访问的来源pod2
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: network-pod02
+  name: network-pod02
+spec:
+  containers:
+  - image: tomcat
+    imagePullPolicy: IfNotPresent
+    name: container-01
+    resources:
+      limits:
+        cpu: 250m
+        memory: 521Mi
+      requests:
+        cpu: 250m
+        memory: 521Mi
+---
+# 被访问的Pod
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: network-pod03
+  name: network-pod03
+spec:
+  containers:
+  - image: tomcat
+    imagePullPolicy: IfNotPresent
+    name: container-01
+    resources:
+      limits:
+        cpu: 250m
+        memory: 521Mi
+      requests:
+        cpu: 250m
+        memory: 521Mi
+---
+# 设置网络策略 对于network-pod03---network-pod01可以访问但是network-pod02不可以访问
+apiVersion: networking.k8s.io/v1 
+kind: NetworkPolicy 
+metadata: 
+  name: network-policy-pod03 
+  namespace: default 
+spec: 
+  podSelector: 
+    matchLabels:  #规则匹配器，选择匹配的Pod
+      app: network-pod03 
+#    matchExpressions:  #规则匹配器，选择匹配的Pod
+#    - {key: app, operator: In, values: [network-pod01,network-pod02]}
+  policyTypes: 
+  - Ingress 
+#  - Egress 
+  ingress: 
+  - from: 
+    - podSelector:       #远端（访问端）pod白名单开放
+        matchLabels: 
+          app: network-pod01 
+        # matchExpressions:  #规则扩展的匹配器，选择匹配的Pod
+        # - {key: app, operator: In, values: [network-pod01,network-pod02]}
+    ports:           # 本端（被访问端）允许被访问的端口和协议
+    - protocol: TCP 
+      port: 8080

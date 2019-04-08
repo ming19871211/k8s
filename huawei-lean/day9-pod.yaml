@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cce21days-app5-pod-ming19871211
+  labels:
+    app: cce21days-app5-pod-ming19871211
+spec:
+  affinity:
+    nodeAffinity:
+      # 此处亲和性设置是为了将pod调度到有EIP的节点，便于下载外网镜像
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: kubernetes.io/hostname
+            operator: In
+            values:
+            - 192.168.0.107
+  containers:
+  - image: nginx:latest
+    imagePullPolicy: IfNotPresent
+    name: container-0
+  restartPolicy: Always
+  schedulerName: default-scheduler

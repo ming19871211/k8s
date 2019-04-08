@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cce21days-ming19871211
+  labels:
+    app: nginx
+spec:
+  affinity: #亲和性配置
+    nodeAffinity: #节点亲和性配置
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: kubernetes.io/hostname
+            operator: In
+            values:
+            - 192.168.0.107 #有EIP的node节点的私网IP地址
+  containers:
+  - image: 100.125.0.198:20202/f00355482/tanks:v1 #容器镜像地址
+    imagePullPolicy: IfNotPresent
+    name: container-0
+    resources: {}
+  dnsPolicy: ClusterFirst
+  imagePullSecrets:
+  - name: default-secret
+  restartPolicy: Always
+  schedulerName: default-scheduler
+  securityContext: {}

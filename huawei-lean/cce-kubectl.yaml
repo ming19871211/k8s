@@ -1,0 +1,51 @@
+#kubectl run cce-kubectl --image=swr.cn-south-1.myhuaweicloud.com/kevin-wangzefeng/cce-kubectl:v1 --env="PASSWORD=mqm"  --port=3000 -o yaml --dry-run > cce-kubectl.yaml 
+#kubectl expose deployment/cce-kubectl --port 3000 -o yaml --dry-run > cce-kubectl-svc.yaml 
+#用户名称：term/mqm  127.0.0.1:30003
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    run: cce-kubectl
+  name: cce-kubectl
+spec:
+  ports:
+  - port: 3000
+    protocol: TCP
+    targetPort: 3000
+    nodePort: 30003
+  selector:
+    run: cce-kubectl
+  type: NodePort
+status:
+  loadBalancer: {}
+---
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    run: cce-kubectl
+  name: cce-kubectl
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      run: cce-kubectl
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        run: cce-kubectl
+    spec:
+      containers:
+      - env:
+        - name: PASSWORD
+          value: mqm
+        image: swr.cn-south-1.myhuaweicloud.com/kevin-wangzefeng/cce-kubectl:v1
+        name: cce-kubectl
+        ports:
+        - containerPort: 3000
+        resources: {}
+status: {}

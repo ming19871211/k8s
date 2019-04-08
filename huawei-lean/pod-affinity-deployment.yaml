@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    appgroup: ''
+  name: cce21days-app2-ming19871211
+  namespace: default
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: cce21days-app2-ming19871211
+  template:
+    metadata:
+      labels:
+        app: cce21days-app2-ming19871211
+    spec:
+      containers:
+      - image: '100.125.0.198:20202/f00355482/tanks:v1'
+        name: container-0
+      imagePullSecrets:
+      - name: default-secret
+      affinity:  #亲和性配置
+        podAffinity: #pod亲和性配置
+          #设置与cce21days-app1-ming19871211的deployment中pod在节点级别亲和
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - cce21days-app1-ming19871211
+            topologyKey: kubernetes.io/hostname
