@@ -1,8 +1,15 @@
+#生成密码talkedu@2019dev
+#htpasswd -c ./auth admin
+#kubectl create secret generic prometheus-secret --from-file auth --namespace=monitoring
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   name: prometheus-ingress
   namespace: monitoring
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    traefik.ingress.kubernetes.io/auth-type: "basic"
+    traefik.ingress.kubernetes.io/auth-secret: "prometheus-secret"
 spec:
   rules:
   - host: prometheus-dev.talkedu.cn
@@ -12,13 +19,6 @@ spec:
         backend:
           serviceName: prometheus-k8s
           servicePort: web
-  - host: grafana-dev.talkedu.cn
-    http:
-      paths:      
-      - path: /
-        backend:
-          serviceName: grafana
-          servicePort: http
   - host: alertmanager-dev.talkedu.cn
     http:
       paths:      
@@ -26,3 +26,18 @@ spec:
         backend:
           serviceName: alertmanager-main
           servicePort: web
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: grafana-ingress
+  namespace: monitoring
+spec:
+  rules:
+  - host: grafana-dev.talkedu.cn
+    http:
+      paths:      
+      - path: /
+        backend:
+          serviceName: grafana
+          servicePort: http
