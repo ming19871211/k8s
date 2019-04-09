@@ -11,7 +11,7 @@ spec:
     - name: alertmanager-main
       namespace: monitoring
       port: web
-  baseImage: quay.io/prometheus/prometheus
+  baseImage: quay-mirror.qiniu.com/prometheus/prometheus
   nodeSelector:
     beta.kubernetes.io/os: linux
   replicas: 2
@@ -26,7 +26,6 @@ spec:
     fsGroup: 2000
     runAsNonRoot: true
     runAsUser: 1000
-  #设置默认存储
   storage:
     volumeClaimTemplate:
       spec:
@@ -39,8 +38,7 @@ spec:
   serviceAccountName: prometheus-k8s
   serviceMonitorNamespaceSelector: {}
   serviceMonitorSelector: {}
-  version: v2.5.0
-
+  version: v2.7.2
 #挂在默认盘
 ---
 apiVersion: v1
