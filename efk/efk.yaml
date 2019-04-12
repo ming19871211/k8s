@@ -1,0 +1,326 @@
+# Logging Namespace。下列内容都在此 namespace 中.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: logging
+---
+# elasticsearch配置文件
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: elasticsearch
+  namespace: logging
+  labels:
+    app: elasticsearch
+    chart: "elasticsearch-1.24.0"
+    release: "elasticsearch"
+    heritage: "Tiller"
+data:
+  elasticsearch.yml: |-
+    cluster.name: elasticsearch
+
+    node.data: ${NODE_DATA:true}
+    node.master: ${NODE_MASTER:true}
+    node.ingest: ${NODE_INGEST:true}
+    node.name: ${HOSTNAME}
+
+    network.host: 0.0.0.0
+    # see https://github.com/kubernetes/kubernetes/issues/3595
+    bootstrap.memory_lock: ${BOOTSTRAP_MEMORY_LOCK:false}
+
+    discovery:
+      zen:
+        ping.unicast.hosts: ${DISCOVERY_SERVICE:}
+        minimum_master_nodes: ${MINIMUM_MASTER_NODES:2}
+
+    # see https://github.com/elastic/elasticsearch-definitive-guide/pull/679
+    processors: ${PROCESSORS:}
+
+    # avoid split-brain w/ a minimum consensus of two masters plus a data node
+    gateway.expected_master_nodes: ${EXPECTED_MASTER_NODES:2}
+    gateway.expected_data_nodes: ${EXPECTED_DATA_NODES:1}
+    gateway.recover_after_time: ${RECOVER_AFTER_TIME:5m}
+    gateway.recover_after_master_nodes: ${RECOVER_AFTER_MASTER_NODES:2}
+    gateway.recover_after_data_nodes: ${RECOVER_AFTER_DATA_NODES:1}
+  log4j2.properties: |-
+    status = error
+    appender.console.type = Console
+    appender.console.name = console
+    appender.console.layout.type = PatternLayout
+    appender.console.layout.pattern = [%d{ISO8601}][%-5p][%-25c{1.}] %marker%m%n
+    rootLogger.level = info
+    rootLogger.appenderRef.console.ref = console
+    logger.searchguard.name = com.floragunn
+    logger.searchguard.level = info
+---
+# elasticsearch 服务
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: elasticsearch
+  name: elasticsearch
+  namespace: logging
+spec:
+  ports:
+    - port: 9200
+      name: http
+      targetPort: http
+    - port: 9300
+      name: transport
+      targetPort: transport    
+  selector:
+    app: elasticsearch
+---
+# elasticsearch 节点
+apiVersion: apps/v1beta1
+kind: StatefulSet
+metadata:
+  labels:
+    app: elasticsearch
+  name: elasticsearch
+  namespace: logging
+spec:
+  serviceName: elasticsearch
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: elasticsearch
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 1
+            podAffinityTerm:
+              topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  app: "elasticsearch"
+      initContainers:
+      - name: "sysctl"
+        image: "busybox:latest"
+        imagePullPolicy: "Always"
+        resources:
+            {}            
+        command: ["sysctl", "-w", "vm.max_map_count=262144"]
+        securityContext:
+          privileged: true
+      - name: "chown"
+        image: "docker.elastic.co/elasticsearch/elasticsearch-oss:6.7.0"
+        imagePullPolicy: "IfNotPresent"
+        resources:
+            {}            
+        command:
+        - /bin/bash
+        - -c
+        - >
+          set -e;
+          set -x;
+          chown elasticsearch:elasticsearch /usr/share/elasticsearch/data;
+          for datadir in $(find /usr/share/elasticsearch/data -mindepth 1 -maxdepth 1 -not -name ".snapshot"); do
+            chown -R elasticsearch:elasticsearch $datadir;
+          done;
+          chown elasticsearch:elasticsearch /usr/share/elasticsearch/logs;
+          for logfile in $(find /usr/share/elasticsearch/logs -mindepth 1 -maxdepth 1 -not -name ".snapshot"); do
+            chown -R elasticsearch:elasticsearch $logfile;
+          done
+        securityContext:
+          runAsUser: 0
+        volumeMounts:
+        - mountPath: /usr/share/elasticsearch/data
+          name: data
+      containers:
+      - name: elasticsearch
+        env:
+        - name: DISCOVERY_SERVICE
+          value: elasticsearch
+        - name: PROCESSORS
+          valueFrom:
+            resourceFieldRef:
+              resource: limits.cpu
+        - name: ES_JAVA_OPTS
+          value: "-Djava.net.preferIPv4Stack=true -Xms1536m -Xmx1536m  "
+        - name: MINIMUM_MASTER_NODES
+          value: "2"
+        image: "docker.elastic.co/elasticsearch/elasticsearch-oss:6.7.0"
+        imagePullPolicy: "IfNotPresent"
+        ports:
+        - containerPort: 9200
+          name: http
+        - containerPort: 9300
+          name: transport
+        resources:
+            limits:
+              cpu: "1"
+            requests:
+              cpu: 25m
+              memory: 1536Mi            
+        readinessProbe:
+          httpGet:
+            path: /_cluster/health?local=true
+            port: 9200
+          initialDelaySeconds: 5          
+        volumeMounts:
+        - mountPath: /usr/share/elasticsearch/data
+          name: data
+        - mountPath: /usr/share/elasticsearch/config/elasticsearch.yml
+          name: config
+          subPath: elasticsearch.yml
+      terminationGracePeriodSeconds: 3600
+      volumes:
+      - name: config
+        configMap:
+          name: elasticsearch
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes:
+        - "ReadWriteOnce"
+      resources:
+        requests:
+          storage: "50Gi"
+---
+#挂在默认盘
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: es00
+  namespace: logging
+  labels:
+    app: elasticsearch
+spec:
+  capacity:
+    storage: 50Gi
+  accessModes:
+  - ReadWriteOnce # required
+  nfs:
+    path: /data/k8s-nfs/elasticsearch/data00
+    server: nfs-dev.talkedu.cn
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: es01
+  namespace: logging
+  labels:
+    app: elasticsearch
+spec:
+  capacity:
+    storage: 50Gi
+  accessModes:
+  - ReadWriteOnce # required
+  nfs:
+    path: /data/k8s-nfs/elasticsearch/data01
+    server: nfs-dev.talkedu.cn
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: es02
+  namespace: logging
+  labels:
+    app: elasticsearch
+spec:
+  capacity:
+    storage: 50Gi
+  accessModes:
+  - ReadWriteOnce # required
+  nfs:
+    path: /data/k8s-nfs/elasticsearch/data02
+    server: nfs-dev.talkedu.cn
+---
+# kibana 配置文件
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kibana
+  namespace: logging
+  labels:
+    app: kibana
+data:
+  kibana.yml: |
+    elasticsearch.url: http://elasticsearch:9200
+    server.host: "0"
+    server.name: kibana
+---
+# kibana 服务
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: kibana
+  name: kibana
+  namespace: logging
+spec:
+  ports:
+  - port: 5601
+    targetPort: 5601
+    protocol: TCP
+  selector:
+    app: kibana
+---
+# kibana部署
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: kibana
+  name: kibana
+  namespace: logging
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      labels:
+        app: kibana
+    spec:
+      containers:
+      - name: kibana
+        image: "docker.elastic.co/kibana/kibana-oss:6.7.0"
+        imagePullPolicy: IfNotPresent
+        env:
+        ports:
+        - containerPort: 5601
+          name: kibana
+          protocol: TCP
+        resources:
+          limits:
+            cpu: 1000m
+          requests:
+            cpu: 100m         
+        volumeMounts:
+        - name: kibana
+          mountPath: "/usr/share/kibana/config/kibana.yml"
+          subPath: kibana.yml
+      tolerations:
+        []        
+      volumes:
+        - name: kibana
+          configMap:
+            name: kibana
+---
+#生成密码changeme
+#htpasswd -c ./auth elastic
+#kubectl create secret generic kibana-secret --from-file auth --namespace=logging
+#kibana Ingress
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: kibana-ingress
+  namespace: logging
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    traefik.ingress.kubernetes.io/auth-type: "basic"
+    traefik.ingress.kubernetes.io/auth-secret: "kibana-secret"
+spec:
+  rules:
+  - host: kibana-dev.talkedu.cn
+    http:
+      paths:      
+      - path: /
+        backend:
+          serviceName: kibana
+          servicePort: 5601
