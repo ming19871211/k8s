@@ -17,7 +17,7 @@ spec:
   - port: 9200
     protocol: TCP
     targetPort: db
-    selector:
+  selector:
     app: elasticsearch
 ---
 # Elasticsearch Deployment
@@ -80,7 +80,7 @@ spec:
     port: 24224
     protocol: UDP
     targetPort: 24224
-    selector:
+  selector:
     app: fluentd-es
 ---
 # Fluentd Deployment
@@ -101,7 +101,8 @@ spec:
     spec:
       containers:
       - name: fluentd-es
-        image: gcr.io/google-containers/fluentd-elasticsearch:v2.0.1
+        #image: gcr.io/google-containers/fluentd-elasticsearch:v2.0.1
+        image: ming19871211/fluentd-elasticsearch:v2.0.1
         env:
         - name: FLUENTD_ARGS
           value: --no-supervisor -q
@@ -165,7 +166,7 @@ spec:
   - port: 5601
     protocol: TCP
     targetPort: ui
-    selector:
+  selector:
     app: kibana
 ---
 # Kibana Deployment
@@ -201,3 +202,21 @@ spec:
           name: ui
           protocol: TCP
 ---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: kibana-ingress
+  namespace: logging
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    #traefik.ingress.kubernetes.io/auth-type: "basic"
+    #traefik.ingress.kubernetes.io/auth-secret: "kibana-secret"
+spec:
+  rules:
+  - host: kibana-dev.talkedu.cn
+    http:
+      paths:      
+      - path: /
+        backend:
+          serviceName: kibana
+          servicePort: 5601

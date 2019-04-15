@@ -23,7 +23,7 @@ metadata:
   name: handler
   namespace: istio-system
 spec:
-  address: "fluentd-es.logging:24224"
+  address: "fluentd-elasticsearch.logging:24224"
 ---
 # 将 logentry 示例发送到 Fluentd handler 的 rule
 apiVersion: "config.istio.io/v1alpha2"

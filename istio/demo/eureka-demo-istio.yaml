@@ -1,0 +1,37 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: eureka-demo-gateway
+  namespace: talkedu-demo
+spec:
+  selector:
+    istio: ingressgateway # use istio default controller
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - "eureka-demo.talkedu.cn"
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: eureka-demo
+  namespace: talkedu-demo
+spec:
+  hosts:
+  - "eureka-demo.talkedu.cn"
+  gateways:
+  - eureka-demo-gateway
+  http:
+  - match:
+    #- uri:
+    #    exact: /
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        host: register
+        port:
+          number: 80
