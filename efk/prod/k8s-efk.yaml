@@ -4,7 +4,6 @@ kind: Namespace
 metadata:
   name: logging
 
-
 ##################Elasticsearch#############################
 ---
 # elasticsearch配置文件
@@ -937,7 +936,7 @@ spec:
         - name: OUTPUT_SSL_VERSION
           value: "TLSv1_2"
         - name: OUTPUT_BUFFER_CHUNK_LIMIT
-          value: "2M"
+          value: "8M"
         - name: OUTPUT_BUFFER_QUEUE_LIMIT
           value: "8"
         - name: K8S_NODE_NAME
