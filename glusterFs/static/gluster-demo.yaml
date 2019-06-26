@@ -1,0 +1,76 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: glusterfs-cluster 
+spec:
+  ports:
+  - port: 1
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: glusterfs-cluster 
+subsets:
+  - addresses:
+      - ip: 192.168.2.22
+    ports:
+      - port: 1 
+  - addresses:
+      - ip: 192.168.2.23
+    ports:
+      - port: 1 
+  - addresses:
+      - ip: 192.168.2.24
+    ports:
+      - port: 1 
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: gluster-default-volume 
+  annotations:
+    pv.beta.kubernetes.io/gid: "590" 
+spec:
+  capacity:
+    storage: 2Gi 
+  accessModes: 
+    - ReadWriteMany
+  glusterfs:
+    endpoints: glusterfs-cluster 
+    path: brick1
+    readOnly: false
+  persistentVolumeReclaimPolicy: Retain
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gluster-claim  
+spec:
+  accessModes:
+  - ReadWriteMany      
+  resources:
+     requests:
+       storage: 2Gi
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hello-nginx-pod
+  labels:
+    name: hello-nginx-pod
+spec:
+  containers:
+  - name: hello-nginx-pod
+    image: nginx:stable
+    ports:
+    - name: web
+      containerPort: 80
+    volumeMounts:
+    - name: gluster-vol1
+      mountPath: /usr/share/nginx/html
+      readOnly: false
+  volumes:
+  - name: gluster-vol1
+    persistentVolumeClaim:
+      claimName: gluster-claim 

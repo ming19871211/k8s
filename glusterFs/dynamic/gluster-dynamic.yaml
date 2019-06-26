@@ -1,0 +1,43 @@
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: glusterfs
+provisioner: kubernetes.io/glusterfs
+parameters:
+  resturl: "http://10.42.0.0:8080" 
+  restauthenabled: "false" 
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+ name: gluster1
+spec:
+ accessModes:
+  - ReadWriteMany
+ resources:
+   requests:
+        storage: 30Gi
+ storageClassName: glusterfs
+ ---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hello-nginx-pod2
+  labels:
+    name: hello-nginx-pod2
+spec:
+  containers:
+  - name: hello-nginx-pod2
+    image: nginx:stable
+    ports:
+    - name: web
+      containerPort: 80
+    volumeMounts:
+    - name: gluster-vol1
+      mountPath: /usr/share/nginx/html
+      readOnly: false
+  volumes:
+  - name: gluster-vol1
+    persistentVolumeClaim:
+      claimName: gluster1
