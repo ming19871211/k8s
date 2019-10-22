@@ -317,7 +317,8 @@ metadata:
   name: kibana-ingress
   namespace: logging
   annotations:
-    kubernetes.io/ingress.class: traefik
+    nginx.ingress.kubernetes.io/auth-secret: kibana-secret
+    nginx.ingress.kubernetes.io/auth-type: basic
     traefik.ingress.kubernetes.io/auth-type: "basic"
     traefik.ingress.kubernetes.io/auth-secret: "kibana-secret"
 spec:
