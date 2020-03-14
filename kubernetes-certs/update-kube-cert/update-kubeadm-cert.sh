@@ -1,4 +1,3 @@
-  
 #!/bin/bash
 
 set -o errexit
@@ -267,6 +266,7 @@ main() {
               ├── healthcheck-client.crt
               ├── peer.crt
               └── server.crt
+
     '\033[32m./update-kubeadm-cert.sh etcd\033[0m' update only etcd certificates
       /etc/kubernetes
       └── pki
@@ -275,6 +275,7 @@ main() {
               ├── healthcheck-client.crt
               ├── peer.crt
               └── server.crt
+
     '\033[32m./update-kubeadm-cert.sh master\033[0m' update only master certificates and kubeconf
       /etc/kubernetes
       ├── admin.conf
